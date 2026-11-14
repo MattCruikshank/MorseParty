@@ -20,7 +20,7 @@ Each player gets their own tone (pitch and waveform) and color.
 ## Settings (per browser)
 
 - Keying speed (WPM), which sets the dash threshold and letter/word gaps
-- Key helper: the Morse tree card, the alphabet, a QWERTY keyboard (each with the Morse code under every character), or nothing. While you key, the characters still possible light up. Also switchable right above the key.
+- Key helper: the Morse tree card, the alphabet, a QWERTY keyboard (each with the Morse code under every character), or nothing. While you key, the characters still possible light up (this can be turned off). Also switchable right above the key.
 - Hear your own tone
 - Hear others' tones, either **as keyed** (their real timing, live, with a small jitter buffer) or **cleaned up** (perfect timing after each letter)
 - Show dots and dashes on the tapes

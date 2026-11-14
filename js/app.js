@@ -8,7 +8,7 @@
   // ======================================================================
   const DEFAULTS = {
     name: '', wpm: 12,
-    keyHelper: 'card', hearSelf: true,
+    keyHelper: 'card', lightUp: true, hearSelf: true,
     hearOthers: true, toneStyle: 'live', showMarks: true, playTyped: false, volume: 0.5,
   };
   const S = (() => {
@@ -519,7 +519,7 @@
   }
   function preview() {
     if (!down) return;
-    Card.setPending(code + symFor(performance.now() - t0));
+    if (S.lightUp) Card.setPending(code + symFor(performance.now() - t0));
     raf = requestAnimationFrame(preview);
   }
   function release() {
@@ -534,9 +534,11 @@
     Card.transmitting(false);
     keyBtn.classList.remove('down');
     code += sym;
-    Card.lightPath(code);
-    RefChart.show(code);
-    if (!PREFIXES.has(code)) { Card.flashError(code); RefChart.flashError(); }
+    if (S.lightUp) {
+      Card.lightPath(code);
+      RefChart.show(code);
+      if (!PREFIXES.has(code)) { Card.flashError(code); RefChart.flashError(); }
+    }
     setLocal(false, sym);
     letterTimer = setTimeout(commitLetter, 3 * unit());
     wordTimer = setTimeout(() => send({ t: 'space' }), 7 * unit());
@@ -715,13 +717,14 @@
     wpm.addEventListener('input', () => { S.wpm = +wpm.value; $('#wpmOut').textContent = `${S.wpm} WPM`; save(); });
     wpm.addEventListener('change', () => send({ t: 'wpm', wpm: S.wpm }));
 
-    const checks = { setHearSelf: 'hearSelf', setHearOthers: 'hearOthers', setShowMarks: 'showMarks', setPlayTyped: 'playTyped' };
+    const checks = { setLightUp: 'lightUp', setHearSelf: 'hearSelf', setHearOthers: 'hearOthers', setShowMarks: 'showMarks', setPlayTyped: 'playTyped' };
     for (const [id, key] of Object.entries(checks)) {
       const el = $('#' + id);
       el.checked = S[key];
       el.addEventListener('change', () => {
         S[key] = el.checked; save();
         if (key === 'showMarks') renderTapes();
+        if (key === 'lightUp' && !el.checked) { Card.clear(); Card.setPending(null); RefChart.show(''); }
       });
     }
     document.querySelectorAll('input[name="toneStyle"]').forEach(r => {
