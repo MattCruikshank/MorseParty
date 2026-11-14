@@ -38,11 +38,21 @@
   // ======================================================================
   let net = null, isHost = false, roomCode = '';
   let mode = 'race';
+  let challenge = false, target = null;
+  let keyerRule = 'anyone', turnN = 5, turn = null, mole = null;
   let players = new Map();     // pid -> {pid, name, voice, score, online, wpm}
   let order = [];              // pids in join order
   let tapes = new Map();       // pid -> [item]
   const live = new Map();      // pid -> {code, down, at}   (dots/dashes in progress)
 
+  const MODE_NAMES = { race: 'Race', team: 'Team', whack: 'Whack-a-Mole', chat: 'Chat' };
+  const KEYER_RULES = { anyone: 'anyone keys', rr1: 'take turns, 1 letter each', rrN: 'take turns, N letters each' };
+  const MODE_HELP = {
+    race: 'Anyone can key. Everyone else types the letter they hear. First right answer scores; a wrong guess locks you out for a second.',
+    team: 'Anyone can key. Everyone else gets one guess per letter. Everyone who gets it right scores, and so does the keyer if anyone got it.',
+    whack: 'A letter pops up for everyone. The first person to key it correctly gets the point.',
+    chat: 'No right answers. Key or type, and everything you send goes on your own tape.',
+  };
   const voiceOf = pid => VOICES[(players.get(pid) || {}).voice || 0] || VOICES[0];
   const nameOf = pid => (players.get(pid) || {}).name || '?';
   const send = msg => net && net.send(msg);
@@ -150,6 +160,12 @@
     switch (msg.t) {
       case 'welcome':
         mode = msg.mode;
+        challenge = !!msg.challenge;
+        target = msg.target || null;
+        keyerRule = msg.keyerRule || 'anyone';
+        turnN = msg.turnN || 5;
+        turn = msg.turn || null;
+        mole = msg.mole || null;
         setPlayers(msg.players);
         tapes = new Map(Object.entries(msg.tapes));
         renderAll();
@@ -175,7 +191,41 @@
       case 'mode':
         mode = msg.mode;
         renderMode();
-        toast(`${msg.by} switched to ${mode === 'race' ? 'Race' : 'Chat'}`);
+        toast(`${msg.by} switched to ${MODE_NAMES[mode]}`);
+        break;
+      case 'challengeMode':
+        challenge = !!msg.on;
+        renderMode();
+        toast(`${msg.by} switched to ${challenge ? 'Challenge' : 'Free play'}`);
+        break;
+      case 'keyers':
+        keyerRule = msg.rule;
+        turnN = msg.n;
+        renderMode();
+        toast(`${msg.by}: ${KEYER_RULES[keyerRule].replace('N', turnN)}`);
+        break;
+      case 'turn': {
+        const was = turn && turn.pid;
+        turn = msg.turn;
+        renderTurn();
+        if (turn && turn.pid === ME && was !== ME) toast('Your turn to key!', 'ok');
+        break;
+      }
+      case 'mole':
+        mole = msg.mole;
+        renderMole(true);
+        break;
+      case 'whacked': {
+        const who = msg.by === ME ? 'You' : nameOf(msg.by);
+        toast(`${esc(who)} whacked <b>${esc(msg.ch)}</b> in ${(msg.ms / 1000).toFixed(1)} s`, msg.by === ME ? 'ok' : '');
+        mole = null;
+        renderMole(false, msg.by);
+        renderPlayers();
+        break;
+      }
+      case 'target':
+        target = msg.ch || null;
+        renderTarget();
         break;
       case 'down': onRemoteKey(msg.pid, true, msg.kt); break;
       case 'up': onRemoteKey(msg.pid, false, msg.kt, msg.sym); break;
@@ -209,6 +259,18 @@
       flashCell(pid, item.id);
       renderPlayers();
     }
+    if (before && before.state === 'open' && item.state === 'done') teamToast(pid, item);
+  }
+
+  function teamToast(pid, it) {
+    const names = it.correct.map(q => (q === ME ? 'you' : nameOf(q)));
+    const keyer = pid === ME ? 'you' : nameOf(pid);
+    let text;
+    if (!names.length) text = `Nobody got <b>${esc(it.ch)}</b>`;
+    else text = `<b>${esc(it.ch)}</b>: ${esc(names.join(', '))} got it` + (it.keyerScored ? ` · ${esc(keyer)} +1 for keying` : '');
+    if (it.target && it.target !== it.ch) text += ` · ${esc(keyer)} was meant to key <b>${esc(it.target)}</b>`;
+    toast(text, it.correct.includes(ME) || (pid === ME && it.keyerScored) ? 'ok' : '');
+    flashCell(pid, it.id);
   }
 
   function onRemoteKey(pid, down, kt, sym) {
@@ -245,14 +307,64 @@
       b.classList.toggle('on', on);
       b.setAttribute('aria-checked', on);
     });
-    $('#guessPanel').hidden = mode !== 'race';
+    const scored = mode !== 'chat';
+    $('#guessPanel').hidden = mode !== 'race' && mode !== 'team';
     $('#chatPanel').hidden = mode !== 'chat';
-    $('#resetBtn').hidden = mode !== 'race';
-    $('#modeHelp').textContent = mode === 'race'
-      ? 'Anyone can key. Everyone else types the letter they hear. First right answer scores; a wrong guess locks you out for a second.'
-      : 'No right answers. Key or type, and everything you send goes on your own tape.';
+    $('#resetBtn').hidden = !scored;
+    $('#challengeSeg').hidden = mode !== 'team';
+    $('#keyerRuleBox').hidden = mode !== 'team';
+    $('#keyerRule').value = keyerRule;
+    $('#turnN').value = turnN;
+    $('#turnNBox').hidden = keyerRule !== 'rrN';
+    document.querySelectorAll('#challengeSeg button').forEach(b => {
+      const on = (b.dataset.challenge === '1') === challenge;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', on);
+    });
+    $('#guessLabel').textContent = mode === 'team' ? 'Type the letter you hear (one guess per letter)' : 'Type the letter you hear';
+    $('#modeHelp').textContent = MODE_HELP[mode] + (mode === 'team' && challenge
+      ? ' Challenge: everyone gets a random letter to key, and the keyer only scores if they key it right.' : '');
     document.body.dataset.mode = mode;
     renderPlayers();
+    renderTurn();
+    renderMole(false);
+  }
+
+  const myTurn = () => !turn || turn.pid === ME;
+
+  function renderTarget() {
+    $('#targetPanel').hidden = !(mode === 'team' && challenge && target && myTurn());
+    $('#targetCh').textContent = target || '';
+  }
+
+  function renderTurn() {
+    const on = mode === 'team' && !!turn;
+    $('#turnPanel').hidden = !on;
+    document.body.classList.toggle('not-my-turn', on && turn.pid !== ME);
+    if (on) {
+      const left = turn.per > 1 ? ` (${turn.left} of ${turn.per} letters left)` : '';
+      $('#turnText').innerHTML = turn.pid === ME
+        ? `<b>Your turn to key</b>${left}`
+        : `<b>${esc(nameOf(turn.pid))}</b> is keying${left}. Listen and guess!`;
+      $('#turnPanel').classList.toggle('mine', turn.pid === ME);
+      $('#passBtn').hidden = turn.pid !== ME;
+    }
+    renderTarget();
+    renderPlayers();
+  }
+
+  function renderMole(popped, winner) {
+    $('#molePanel').hidden = mode !== 'whack';
+    const el = $('#moleCh');
+    if (mole) {
+      el.textContent = mole.ch;
+      el.className = 'mole up';
+      if (popped) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+      $('#moleText').textContent = 'First to key it wins!';
+    } else {
+      el.className = 'mole down';
+      $('#moleText').textContent = winner ? `${winner === ME ? 'You' : nameOf(winner)} got it! Next one coming…` : 'Get ready…';
+    }
   }
 
   function renderPlayers() {
@@ -262,10 +374,11 @@
       if (!p) return '';
       const v = VOICES[p.voice] || VOICES[0];
       const l = live.get(pid);
-      return `<div class="player${p.online ? '' : ' offline'}${l && (l.down || l.code) ? ' keying' : ''}" data-pid="${esc(pid)}">
+      const turnCls = mode === 'team' && turn && turn.pid === pid ? ' has-key' : '';
+      return `<div class="player${p.online ? '' : ' offline'}${l && (l.down || l.code) ? ' keying' : ''}${turnCls}" data-pid="${esc(pid)}">
         <span class="swatch" style="--c:${v.color}"></span>
         <span class="pname">${esc(p.name)}${pid === ME ? ' <small>(you)</small>' : ''}</span>
-        ${mode === 'race' ? `<span class="score">${p.score}</span>` : ''}
+        ${mode !== 'chat' ? `<span class="score">${p.score}</span>` : ''}
       </div>`;
     }).join('');
   }
@@ -301,6 +414,19 @@
       const c = w ? (VOICES[w.voice] || VOICES[0]).color : '#888';
       style = ` style="--w:${c}"`;
       meta = `<span class="meta">${esc(w ? w.name : '?')} · ${(it.ms / 1000).toFixed(1)}s</span>`;
+    }
+    if (it.team) {
+      if (it.state === 'open') {
+        meta = `<span class="meta progress">${it.myGuess ? 'guessed · ' : ''}${it.guessed}/${it.eligible}</span>`;
+      } else if (it.state === 'done') {
+        const dots = it.correct.map(q => {
+          const w = players.get(q);
+          return `<i style="--w:${w ? (VOICES[w.voice] || VOICES[0]).color : '#888'}" title="${esc(w ? w.name : '?')}"></i>`;
+        }).join('');
+        cls += it.correct.length ? ' got' : ' nobody';
+        meta = `<span class="meta team-result">${dots}${it.correct.length}/${it.eligible}${it.keyerScored ? ' ★' : ''}</span>`;
+        if (it.target && it.target !== it.ch) meta += `<span class="meta wanted">wanted ${esc(it.target)}</span>`;
+      }
     }
     if (it.typed) cls += ' typed';
     return `<div class="cell ${cls}" data-id="${it.id}"${style}><span class="ch">${esc(ch)}</span>${marksHtml(it.code)}${meta}</div>`;
@@ -357,8 +483,13 @@
   const unit = () => 1200 / S.wpm;
   const symFor = ms => (ms >= 2 * unit() ? '-' : '.');
 
+  let turnToastAt = 0;
   function press() {
     if (down || !net) return;
+    if (mode === 'team' && !myTurn()) {
+      if (Date.now() - turnToastAt > 2500) { turnToastAt = Date.now(); toast(`It's ${esc(nameOf(turn.pid))}'s turn to key`); }
+      return;
+    }
     Sound.ensure();
     down = true;
     t0 = performance.now();
@@ -427,7 +558,7 @@
   // ======================================================================
   const chatInput = $('#chatInput');
   const inRoom = () => !$('#room').hidden && $('#drawer').getAttribute('aria-hidden') === 'true';
-  const typingInField = el => el && (el.tagName === 'INPUT' && el.type === 'text' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+  const typingInField = el => el && (el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number') || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
   const GUESSABLE = /^[A-Za-z0-9.,?'!/()&:;=+\-_"$@]$/;
 
   document.addEventListener('keydown', e => {
@@ -440,7 +571,7 @@
       return;
     }
     if (typingInField(target)) return;
-    if (mode === 'race' && GUESSABLE.test(e.key)) {
+    if ((mode === 'race' || mode === 'team') && GUESSABLE.test(e.key)) {
       e.preventDefault();
       guess(e.key.toUpperCase());
     } else if (mode === 'chat' && e.key.length === 1) {
@@ -468,10 +599,12 @@
     const box = $('#guessBox'), msg = $('#guessMsg');
     box.textContent = m.ch;
     box.className = 'guess-box ' + m.result;
-    if (m.result === 'right') msg.textContent = `Yes! ${(m.ms / 1000).toFixed(2)} s`;
+    if (m.team && m.result === 'right') msg.textContent = 'Right!';
+    else if (m.team && m.result === 'wrong') msg.textContent = 'Not quite. The answer shows when the letter closes.';
+    else if (m.result === 'right') msg.textContent = `Yes! ${(m.ms / 1000).toFixed(2)} s`;
     else if (m.result === 'pending') msg.textContent = 'Waiting for the letter to finish…';
     else if (m.result === 'nothing') msg.textContent = 'Nothing to guess yet.';
-    else if (m.result === 'wrong' || m.result === 'locked') {
+    else if ((m.result === 'wrong' || m.result === 'locked') && m.lockMs) {
       msg.textContent = m.result === 'wrong' ? 'Nope — wait a second' : 'Locked…';
       lockUntil = Date.now() + m.lockMs;
       $('#guessPanel').classList.add('locked');
@@ -499,6 +632,17 @@
   // ---- Room buttons ----
   document.querySelectorAll('.mode button').forEach(b =>
     b.addEventListener('click', () => { if (b.dataset.mode !== mode) send({ t: 'mode', mode: b.dataset.mode }); }));
+  document.querySelectorAll('#challengeSeg button').forEach(b =>
+    b.addEventListener('click', () => {
+      const on = b.dataset.challenge === '1';
+      if (on !== challenge) send({ t: 'setChallenge', on });
+    }));
+  $('#skipBtn').addEventListener('click', () => send({ t: 'skip' }));
+  $('#skipMoleBtn').addEventListener('click', () => send({ t: 'skipMole' }));
+  $('#passBtn').addEventListener('click', () => send({ t: 'pass' }));
+  const sendKeyers = () => send({ t: 'setKeyers', rule: $('#keyerRule').value, n: +$('#turnN').value || 5 });
+  $('#keyerRule').addEventListener('change', sendKeyers);
+  $('#turnN').addEventListener('change', sendKeyers);
   $('#clearBtn').addEventListener('click', () => { if (confirm('Clear everyone\'s tapes?')) send({ t: 'clear' }); });
   $('#resetBtn').addEventListener('click', () => { if (confirm('Reset all scores to 0?')) send({ t: 'resetScores' }); });
 

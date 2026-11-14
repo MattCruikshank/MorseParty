@@ -58,7 +58,21 @@
       <div class="room-bar">
         <div class="seg mode" role="radiogroup" aria-label="Mode">
           <button type="button" data-mode="race" role="radio">Race</button>
+          <button type="button" data-mode="team" role="radio">Team</button>
+          <button type="button" data-mode="whack" role="radio">Whack-a-Mole</button>
           <button type="button" data-mode="chat" role="radio">Chat</button>
+        </div>
+        <div class="seg sub" id="challengeSeg" role="radiogroup" aria-label="Team play style">
+          <button type="button" data-challenge="0" role="radio">Free play</button>
+          <button type="button" data-challenge="1" role="radio">Challenge</button>
+        </div>
+        <div class="keyer-rule" id="keyerRuleBox">
+          <select id="keyerRule" aria-label="Who keys">
+            <option value="anyone">Anyone keys</option>
+            <option value="rr1">Take turns: 1 letter each</option>
+            <option value="rrN">Take turns: N letters each</option>
+          </select>
+          <label id="turnNBox" class="turn-n">N = <input id="turnN" type="number" min="1" max="50" value="5"></label>
         </div>
         <p id="modeHelp" class="mode-help"></p>
         <div class="room-actions">
@@ -72,14 +86,33 @@
       <div id="tapes" class="tapes" aria-live="polite"></div>
 
       <div class="you">
+        <div id="turnPanel" class="turn-panel" hidden>
+          <span id="turnText"></span>
+          <button id="passBtn" class="btn small" type="button" hidden>Pass the key</button>
+        </div>
+
+        <div id="molePanel" class="mole-panel" hidden>
+          <div class="mole-hole"><span id="moleCh" class="mole"></span></div>
+          <div class="mole-side">
+            <span id="moleText" class="mole-text">First to key it wins!</span>
+            <button id="skipMoleBtn" class="btn small" type="button">Skip</button>
+          </div>
+        </div>
+
         <div id="guessPanel" class="guess-panel">
-          <span class="guess-label">Type the letter you hear</span>
+          <span class="guess-label" id="guessLabel">Type the letter you hear</span>
           <span id="guessBox" class="guess-box" aria-live="polite"></span>
           <span id="guessMsg" class="guess-msg"></span>
         </div>
         <div id="chatPanel" class="chat-panel" hidden>
           <input id="chatInput" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"
                  placeholder="Type here. Each letter is sent the moment you type it.">
+        </div>
+
+        <div id="targetPanel" class="target-panel" hidden>
+          <span class="target-label">Key this letter</span>
+          <span id="targetCh" class="target-ch"></span>
+          <button id="skipBtn" class="btn small" type="button">Skip</button>
         </div>
 
         <section class="card" id="card" aria-label="Morse tree. Press and hold to key.">

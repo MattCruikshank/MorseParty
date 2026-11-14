@@ -20,13 +20,13 @@ async function key(id, code, unit = 100) {
 const press = (id, key, target) => (target || D(id)).dispatchEvent(new (W(id).KeyboardEvent)('keydown', { key, bubbles: true }));
 window.run = async () => {
   try {
-    await until(() => D('h').getElementById('createBtn'));
+    await until(() => D('h').getElementById('wpmOut') && D('h').getElementById('wpmOut').textContent);
     D('h').getElementById('nameInput').value = 'Host';
     D('h').getElementById('createBtn').click();
     const code = await until(() => D('h').getElementById('roomCode').textContent);
     L('room code ' + code);
     document.getElementById('g').src = '../index.html?pid=guest1&room=' + code;
-    await until(() => D('g').getElementById('joinBtn'));
+    await until(() => D('g').getElementById('wpmOut') && D('g').getElementById('wpmOut').textContent);
     D('g').getElementById('nameInput').value = 'Guest';
     D('g').getElementById('joinBtn').click();
     await until(() => D('g').querySelectorAll('.player').length === 2 && D('h').querySelectorAll('.player').length === 2);
@@ -60,6 +60,36 @@ window.run = async () => {
     const rows = [...D('h').querySelectorAll('.tape-row')].map(r => r.querySelector('.tape-name').textContent + ': ' +
       [...r.querySelectorAll('.cell')].map(c => c.classList.contains('space') ? '_' : c.querySelector('.ch').textContent).join(''));
     L('host sees tapes -> ' + rows.join(' || '));
+
+    // ---- Team, taking turns 1 letter each ----
+    D('h').querySelector('.mode button[data-mode="team"]').click();
+    await until(() => D('g').body.dataset.mode === 'team');
+    const sel = D('h').getElementById('keyerRule'); sel.value = 'rr1'; sel.dispatchEvent(new Event('change'));
+    await until(() => !D('g').getElementById('turnPanel').hidden);
+    L('guest turn panel: ' + D('g').getElementById('turnText').textContent);
+    await key('g', '.');  // not the guest's turn
+    await sleep(500);
+    L('guest key while not their turn -> guest tape cells: ' + D('h').querySelectorAll('.tape-row')[1].querySelectorAll('.cell.done, .cell.open').length);
+    await key('h', '--');
+    await until(() => D('g').querySelector('.cell.open'), 3000);
+    press('g', 'm');
+    await until(() => D('h').querySelector('.cell.done'), 3000);
+    L('team result cell: ' + D('h').querySelector('.cell.done').textContent.replace(/\s+/g, ' ').trim());
+    L('scores: ' + [...D('h').querySelectorAll('.player')].map(p => p.textContent.replace(/\s+/g, ' ').trim()).join(' | '));
+    await until(() => D('g').getElementById('turnPanel').classList.contains('mine'));
+    L('turn passed to guest: ' + D('g').getElementById('turnText').textContent);
+
+    // ---- Whack-a-Mole ----
+    D('g').querySelector('.mode button[data-mode="whack"]').click();
+    await until(() => D('h').getElementById('moleCh').classList.contains('up'));
+    const moleCh = D('h').getElementById('moleCh').textContent;
+    L('mole: ' + moleCh);
+    await key('g', W('g').eval('MORSE_CHAR_TO_CODE')[moleCh]);
+    await until(() => D('h').querySelector('.cell.hit'), 3000);
+    L('whacked; host mole text: ' + D('h').getElementById('moleText').textContent);
+    L('scores: ' + [...D('h').querySelectorAll('.player')].map(p => p.textContent.replace(/\s+/g, ' ').trim()).join(' | '));
+    await sleep(1500);
+    L('next mole: ' + D('h').getElementById('moleCh').textContent + ' up=' + D('h').getElementById('moleCh').classList.contains('up'));
     window.done = 'ok';
   } catch (e) {
     try { L('host lobbyMsg: ' + D('h').getElementById('lobbyMsg').textContent); } catch (x) {}

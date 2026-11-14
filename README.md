@@ -9,6 +9,10 @@ One person creates a room and shares the code or invite link. Everyone joins fro
 ## Modes
 
 - **Race.** Anyone can key. Everyone else types the letter they hear, and the first right answer scores. A wrong guess locks you out for a second. Each keyer's letters build up on their own ticker tape, revealed once someone wins them, or after 6 seconds if nobody does.
+- **Team.** Anyone can key, and every other player gets **one guess** per letter. Everyone who guesses right on their first try gets a point, and the keyer gets a point if at least one person got it. A letter closes when everyone has guessed, or after 8 seconds.
+  - **Free play** or **Challenge**: in Challenge, the keyer is given a random letter to key. Guessers are judged on what was actually keyed, but the keyer only scores if they keyed the challenge letter.
+  - **Who keys**: anyone, or take turns (1 letter each, or N letters each, like "I do 5, you do 5, Mary does 5"). The current keyer can pass the key.
+- **Whack-a-Mole.** A letter pops up for everyone, and the first person to key it correctly gets the point. A new letter appears after a hit, after 15 seconds, or when someone skips.
 - **Chat.** No right answers. Key or type, and everything you send goes on your own tape, like IRC in Morse.
 
 Each player gets their own tone (pitch and waveform) and color.
