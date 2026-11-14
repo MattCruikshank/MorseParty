@@ -8,7 +8,7 @@
   // ======================================================================
   const DEFAULTS = {
     name: '', wpm: 12,
-    showCard: true, hearSelf: true,
+    keyHelper: 'card', hearSelf: true,
     hearOthers: true, toneStyle: 'live', showMarks: true, playTyped: false, volume: 0.5,
   };
   const S = (() => {
@@ -16,6 +16,10 @@
     catch (e) { return Object.assign({}, DEFAULTS); }
   })();
   const save = () => { try { localStorage.setItem('morseparty.settings', JSON.stringify(S)); } catch (e) { /* ignore */ } };
+  // Older versions had a "show card" checkbox.
+  try { if (S.showCard === false && !localStorage.getItem('morseparty.helperSet')) S.keyHelper = 'none'; } catch (e) { /* ignore */ }
+  delete S.showCard;
+  if (!['card', 'alphabet', 'keyboard', 'none'].includes(S.keyHelper)) S.keyHelper = 'card';
 
   // Player id: one per tab (survives a reload). `?pid=` overrides, for testing.
   const params = new URLSearchParams(location.search);
@@ -107,7 +111,7 @@
     $('#room').hidden = false;
     $('#roomInfo').hidden = false;
     $('#roomCode').textContent = roomCode;
-    renderCardVisibility();
+    renderHelper();
     renderAll();
   }
 
@@ -333,8 +337,18 @@
   const myTurn = () => !turn || turn.pid === ME;
 
   function renderTarget() {
-    $('#targetPanel').hidden = !(mode === 'team' && challenge && target && myTurn());
+    const show = mode === 'team' && challenge && target && myTurn();
+    $('#targetPanel').hidden = !show;
     $('#targetCh').textContent = target || '';
+    renderGoal();
+  }
+
+  // The letter you're meant to key right now, outlined on the alphabet/keyboard helper.
+  function renderGoal() {
+    let goal = null;
+    if (mode === 'team' && challenge && target && myTurn()) goal = target;
+    if (mode === 'whack' && mole) goal = mole.ch;
+    RefChart.setGoal(goal);
   }
 
   function renderTurn() {
@@ -365,6 +379,7 @@
       el.className = 'mole down';
       $('#moleText').textContent = winner ? `${winner === ME ? 'You' : nameOf(winner)} got it! Next one coming…` : 'Get ready…';
     }
+    renderGoal();
   }
 
   function renderPlayers() {
@@ -498,7 +513,7 @@
     send({ t: 'down', kt: t0 });
     Card.transmitting(true);
     keyBtn.classList.add('down');
-    if (!code) Card.clear();
+    if (!code) { Card.clear(); RefChart.show(''); }
     setLocal(true);
     preview();
   }
@@ -520,7 +535,8 @@
     keyBtn.classList.remove('down');
     code += sym;
     Card.lightPath(code);
-    if (!PREFIXES.has(code)) Card.flashError(code);
+    RefChart.show(code);
+    if (!PREFIXES.has(code)) { Card.flashError(code); RefChart.flashError(); }
     setLocal(false, sym);
     letterTimer = setTimeout(commitLetter, 3 * unit());
     wordTimer = setTimeout(() => send({ t: 'space' }), 7 * unit());
@@ -530,6 +546,7 @@
     send({ t: 'letter', code, ch: MORSE_CODE_TO_CHAR[code] || null });
     code = '';
     Card.clear();
+    RefChart.show('');
     live.delete(ME);
     renderLive(ME);
   }
@@ -545,7 +562,7 @@
 
   const startKey = e => { e.preventDefault(); try { e.target.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ } press(); };
   const endKey = e => { e.preventDefault(); release(); };
-  for (const el of [keyBtn, cardEl]) {
+  for (const el of [keyBtn, cardEl, $('#refPanel')]) {
     el.addEventListener('pointerdown', startKey);
     el.addEventListener('pointerup', endKey);
     el.addEventListener('pointercancel', endKey);
@@ -660,7 +677,28 @@
   scrim.addEventListener('click', () => openSettings(false));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') openSettings(false); });
 
-  function renderCardVisibility() { cardEl.hidden = !S.showCard; }
+  function renderHelper() {
+    const h = S.keyHelper;
+    cardEl.hidden = h !== 'card';
+    const ref = $('#refPanel');
+    ref.hidden = h !== 'alphabet' && h !== 'keyboard';
+    if (!ref.hidden) RefChart.render(ref, h);
+    document.querySelectorAll('#helperSeg button').forEach(b => {
+      const on = b.dataset.helper === h;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', on);
+    });
+    document.querySelectorAll('input[name="keyHelper"]').forEach(r => { r.checked = r.value === h; });
+    renderGoal();
+  }
+  function setHelper(h) {
+    S.keyHelper = h;
+    try { localStorage.setItem('morseparty.helperSet', '1'); } catch (e) { /* ignore */ }
+    save();
+    renderHelper();
+  }
+  document.querySelectorAll('#helperSeg button').forEach(b => b.addEventListener('click', () => setHelper(b.dataset.helper)));
+  document.querySelectorAll('input[name="keyHelper"]').forEach(r => r.addEventListener('change', () => setHelper(r.value)));
 
   function bindSettings() {
     const name = $('#setName');
@@ -677,13 +715,12 @@
     wpm.addEventListener('input', () => { S.wpm = +wpm.value; $('#wpmOut').textContent = `${S.wpm} WPM`; save(); });
     wpm.addEventListener('change', () => send({ t: 'wpm', wpm: S.wpm }));
 
-    const checks = { setShowCard: 'showCard', setHearSelf: 'hearSelf', setHearOthers: 'hearOthers', setShowMarks: 'showMarks', setPlayTyped: 'playTyped' };
+    const checks = { setHearSelf: 'hearSelf', setHearOthers: 'hearOthers', setShowMarks: 'showMarks', setPlayTyped: 'playTyped' };
     for (const [id, key] of Object.entries(checks)) {
       const el = $('#' + id);
       el.checked = S[key];
       el.addEventListener('change', () => {
         S[key] = el.checked; save();
-        if (key === 'showCard') renderCardVisibility();
         if (key === 'showMarks') renderTapes();
       });
     }
@@ -702,7 +739,7 @@
     });
   }
   bindSettings();
-  renderCardVisibility();
+  renderHelper();
 
   if (codeInput.value) (S.name ? $('#joinBtn') : nameInput).focus();
   else nameInput.focus();

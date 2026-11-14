@@ -396,3 +396,66 @@ body.not-my-turn .key, body.not-my-turn .card { opacity: .45; filter: grayscale(
 .mole-side { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .mole-text { font-weight: 700; font-size: 1.1rem; }
 .cell.hit .ch { background: color-mix(in srgb, var(--ok) 30%, transparent); box-shadow: inset 0 -3px 0 var(--ok); }
+
+/* ---------- Key helpers: alphabet / keyboard ---------- */
+.helper-bar { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 auto 12px; }
+.helper-label { color: var(--muted); font-weight: 600; font-size: .85rem; }
+.helper-radios { margin: 2px 0 4px; }
+.ref {
+  margin: 0 auto; max-width: 900px; padding: 14px 12px 16px;
+  background: radial-gradient(120% 90% at 25% 0%, var(--card-hi), var(--card) 60%);
+  border: 6px solid var(--card-edge); border-radius: 22px; box-shadow: var(--shadow);
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 7px; }
+.ref-grid.digits { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(216,185,126,.35); }
+.ref.keyboard { --kw: min(60px, calc((100vw - 180px) / 12.5)); display: flex; flex-direction: column; gap: 7px; align-items: center; }
+.ref-row { display: flex; gap: 6px; padding-left: calc(var(--indent) * var(--kw)); width: calc(12 * var(--kw) + 66px); }
+.ref.keyboard .rk-marks { gap: 2px; }
+.ref.keyboard .rk-marks i { height: 5px; }
+.ref.keyboard .rk-marks i.h { width: 10px; }
+.ref.keyboard .rk-marks i.d { width: 5px; }
+.ref.keyboard .rk.extra .rk-marks { gap: 1.5px; }
+.ref.keyboard .rk.extra .rk-marks i.h { width: 7px; }
+.ref.keyboard .rk.extra .rk-marks i.d { width: 4px; }
+.ref.keyboard .rk { width: var(--kw); flex: none; }
+.rk {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 62px; padding: 6px 2px; border-radius: 9px;
+  border: 2px solid rgba(216,185,126,.55); color: var(--label);
+  transition: opacity .3s, border-color .3s, background .3s;
+}
+.rk-ch { font: 600 22px/1 'Open Sans', sans-serif; }
+.rk-marks { display: flex; gap: 3px; align-items: center; height: 8px; }
+.rk-marks i { display: block; height: 6px; border-radius: 3px; background: var(--trace); }
+.rk-marks i.d { width: 6px; }
+.rk-marks i.h { width: 15px; }
+.ref.keying .rk { opacity: .28; }
+.ref.keying .rk.possible { opacity: 1; border-color: #fff1c4; transition: none; }
+.ref.keying .rk.current { background: rgba(69, 255, 115, .22); border-color: var(--led-dot); box-shadow: 0 0 12px rgba(69,255,115,.5); }
+.rk.goal { outline: 3px solid #eaff5c; outline-offset: 2px; }
+.ref.bad { animation: shake .35s; }
+.ref.bad .rk { border-color: #ff3b2f; }
+@media (max-width: 600px) {
+  .seg.mode { display: flex; width: 100%; }
+  .seg.mode button { flex: 1 1 auto; padding: 7px 4px; font-size: .86rem; }
+  .ref { border-width: 4px; padding: 10px 6px; border-radius: 16px; }
+  .ref-grid { grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 5px; }
+  .rk { min-height: 50px; gap: 4px; }
+  .rk-ch { font-size: 17px; }
+  .rk-marks i.h { width: 11px; }
+  .rk-marks i.d { width: 5px; }
+  .rk-marks { gap: 2px; }
+  .ref-grid.digits { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); }
+  /* Phones: just the 10-wide letter rows, like a phone keyboard. */
+  .ref.keyboard { --kw: calc((100vw - 76px) / 10); gap: 5px; align-items: flex-start; }
+  .ref.keyboard .extra, .ref.keyboard .extra-row { display: none; }
+  .ref-row { gap: 3px; width: auto; padding-left: calc(var(--indent-m) * (var(--kw) + 3px)); }
+  .ref.keyboard .rk { min-height: 48px; padding: 5px 0; border-width: 1.5px; border-radius: 7px; }
+  .ref.keyboard .rk-ch { font-size: 16px; }
+  .ref.keyboard .rk-marks { gap: 1.5px; height: 6px; }
+  .ref.keyboard .rk-marks i { height: 4px; }
+  .ref.keyboard .rk-marks i.h { width: 7px; }
+  .ref.keyboard .rk-marks i.d { width: 3.5px; }
+}

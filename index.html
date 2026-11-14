@@ -115,10 +115,21 @@
           <button id="skipBtn" class="btn small" type="button">Skip</button>
         </div>
 
+        <div class="helper-bar">
+          <span class="helper-label">Key helper</span>
+          <div class="seg sub" id="helperSeg" role="radiogroup" aria-label="Key helper">
+            <button type="button" data-helper="card" role="radio">Card</button>
+            <button type="button" data-helper="alphabet" role="radio">Alphabet</button>
+            <button type="button" data-helper="keyboard" role="radio">Keyboard</button>
+            <button type="button" data-helper="none" role="radio">None</button>
+          </div>
+        </div>
+
         <section class="card" id="card" aria-label="Morse tree. Press and hold to key.">
           <div class="card-title"><span>MORSE</span><span>CODE</span></div>
           <div id="tree"></div>
         </section>
+        <section id="refPanel" class="ref" hidden aria-label="Morse chart. Press and hold to key."></section>
         <button id="key" class="key" type="button" aria-label="Morse key: press and hold">KEY</button>
         <p class="key-caption">press &amp; hold here, on the card, or hold <kbd>Space</kbd></p>
       </div>
@@ -145,7 +156,13 @@
 
     <fieldset>
       <legend>When you key</legend>
-      <label class="check"><input type="checkbox" id="setShowCard"> Show the Morse card</label>
+      <div class="seg tone-style helper-radios" role="radiogroup" aria-label="Key helper">
+        <label><input type="radio" name="keyHelper" value="card"><span>Card</span></label>
+        <label><input type="radio" name="keyHelper" value="alphabet"><span>Alphabet</span></label>
+        <label><input type="radio" name="keyHelper" value="keyboard"><span>Keyboard</span></label>
+        <label><input type="radio" name="keyHelper" value="none"><span>None</span></label>
+      </div>
+      <p class="fine">What to show above the key: the Morse tree card, the alphabet, or a QWERTY keyboard, each with the Morse code for every character.</p>
       <label class="check"><input type="checkbox" id="setHearSelf"> Hear my own tone</label>
     </fieldset>
 
@@ -168,6 +185,7 @@
   <script src="js/morse.js"></script>
   <script src="js/tree.js"></script>
   <script src="js/card.js"></script>
+  <script src="js/ref.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/room.js"></script>
   <script src="js/net.js"></script>

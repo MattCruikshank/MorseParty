@@ -1,0 +1,35 @@
+<!doctype html><html><body style="margin:0;display:flex;gap:8px;background:#777;align-items:flex-start">
+<iframe id="a" src="../index.html?pid=va" style="width:900px;height:1250px;border:0"></iframe>
+<iframe id="k" src="../index.html?pid=vk" style="width:390px;height:1250px;border:0"></iframe>
+<script>
+window.log = [];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const until = async (fn, ms = 20000) => { const t = Date.now(); while (Date.now() - t < ms) { try { const v = fn(); if (v) return v; } catch (e) {} await sleep(100); } throw new Error('timeout'); };
+const D = id => document.getElementById(id).contentWindow.document;
+const W = id => document.getElementById(id).contentWindow;
+async function tap(id, len) {
+  const k = D(id).getElementById('key');
+  k.dispatchEvent(new (W(id).PointerEvent)('pointerdown', { bubbles: true, pointerId: 1 }));
+  await sleep(len);
+  k.dispatchEvent(new (W(id).PointerEvent)('pointerup', { bubbles: true, pointerId: 1 }));
+}
+window.run = async () => {
+  try {
+    for (const [id, helper, keys] of [['a', 'alphabet', [300, 100]], ['k', 'keyboard', [100]]]) {
+      await until(() => D(id).getElementById('wpmOut').textContent);
+      D(id).getElementById('nameInput').value = id === 'a' ? 'Wide' : 'Phone';
+      D(id).getElementById('createBtn').click();
+      await until(() => D(id).getElementById('roomCode').textContent);
+      D(id).querySelector(`#helperSeg button[data-helper="${helper}"]`).click();
+      D(id).getElementById('setWpm').value = 5; D(id).getElementById('setWpm').dispatchEvent(new Event('input'));
+      if (id === 'k') { D(id).querySelector('.mode button[data-mode="whack"]').click(); await until(() => D(id).getElementById('moleCh').classList.contains('up')); }
+      for (const len of keys) { await tap(id, len); await sleep(200); }
+      D(id).getElementById('refPanel').scrollIntoView();
+      log.push(id + ': tiles=' + D(id).querySelectorAll('.rk').length + ' possible=' + [...D(id).querySelectorAll('.rk.possible')].map(t => t.dataset.ch).join('') +
+        ' goal=' + [...D(id).querySelectorAll('.rk.goal')].map(t => t.dataset.ch).join('') +
+        ' overflow=' + (D(id).documentElement.scrollWidth - D(id).documentElement.clientWidth));
+    }
+    window.done = 'ok';
+  } catch (e) { log.push('ERROR ' + e.message); window.done = 'fail'; }
+};
+</script></body></html>

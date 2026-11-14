@@ -20,7 +20,8 @@ Each player gets their own tone (pitch and waveform) and color.
 ## Settings (per browser)
 
 - Keying speed (WPM), which sets the dash threshold and letter/word gaps
-- Show the Morse card; hear your own tone
+- Key helper: the Morse tree card, the alphabet, a QWERTY keyboard (each with the Morse code under every character), or nothing. While you key, the characters still possible light up. Also switchable right above the key.
+- Hear your own tone
 - Hear others' tones, either **as keyed** (their real timing, live, with a small jitter buffer) or **cleaned up** (perfect timing after each letter)
 - Show dots and dashes on the tapes
 - Play typed chat messages as Morse
@@ -39,6 +40,7 @@ Each player gets their own tone (pitch and waveform) and color.
 | `js/net.js` | PeerJS hosting/joining, room codes |
 | `js/app.js` | UI, keyer, tapes, settings |
 | `js/audio.js` | Sidetones: own key, live remote keying, cleaned-up playback |
+| `js/ref.js` | Alphabet and QWERTY key helpers |
 | `js/card.js`, `js/tree.js` | The light-up Morse tree card (from [MorseCode](https://github.com/MattCruikshank/MorseCode)) |
 
 ## Tests
