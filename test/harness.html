@@ -1,0 +1,68 @@
+<!doctype html><html><body style="margin:0;display:flex;gap:8px;background:#777">
+<iframe id="h" src="../index.html?pid=host1" style="width:640px;height:1300px;border:0"></iframe>
+<iframe id="g" style="width:640px;height:1300px;border:0"></iframe>
+<script>
+window.log = [];
+const L = s => { log.push(s); };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const until = async (fn, ms = 15000) => { const t = Date.now(); while (Date.now() - t < ms) { try { const v = fn(); if (v) return v; } catch (e) {} await sleep(100); } throw new Error('timeout'); };
+const W = id => document.getElementById(id).contentWindow;
+const D = id => W(id).document;
+async function key(id, code, unit = 100) {
+  const k = D(id).getElementById('key');
+  for (const c of code) {
+    k.dispatchEvent(new (W(id).PointerEvent)('pointerdown', { bubbles: true, pointerId: 1 }));
+    await sleep(c === '.' ? unit : 3 * unit);
+    k.dispatchEvent(new (W(id).PointerEvent)('pointerup', { bubbles: true, pointerId: 1 }));
+    await sleep(unit);
+  }
+}
+const press = (id, key, target) => (target || D(id)).dispatchEvent(new (W(id).KeyboardEvent)('keydown', { key, bubbles: true }));
+window.run = async () => {
+  try {
+    await until(() => D('h').getElementById('createBtn'));
+    D('h').getElementById('nameInput').value = 'Host';
+    D('h').getElementById('createBtn').click();
+    const code = await until(() => D('h').getElementById('roomCode').textContent);
+    L('room code ' + code);
+    document.getElementById('g').src = '../index.html?pid=guest1&room=' + code;
+    await until(() => D('g').getElementById('joinBtn'));
+    D('g').getElementById('nameInput').value = 'Guest';
+    D('g').getElementById('joinBtn').click();
+    await until(() => D('g').querySelectorAll('.player').length === 2 && D('h').querySelectorAll('.player').length === 2);
+    L('both see 2 players');
+
+    await key('h', '-.-.');
+    const open = await until(() => D('g').querySelector('.tape-row .cell.open'), 3000);
+    L('guest sees open cell showing: ' + open.querySelector('.ch').textContent);
+    L('host sees own open cell showing: ' + D('h').querySelector('.cell.open .ch').textContent);
+    press('g', 'x');
+    await until(() => D('g').getElementById('guessBox').classList.contains('wrong'));
+    L('wrong guess -> ' + D('g').getElementById('guessMsg').textContent);
+    await sleep(1100);
+    press('g', 'c');
+    await until(() => D('g').getElementById('guessBox').classList.contains('right'));
+    L('right guess -> ' + D('g').getElementById('guessMsg').textContent);
+    await until(() => D('h').querySelector('.cell.won'));
+    L('host tape now: ' + [...D('h').querySelectorAll('.tape-row')[0].querySelectorAll('.cell .ch')].map(e => e.textContent).join('') +
+      ' meta=' + D('h').querySelector('.cell.won .meta').textContent);
+    L('scores: ' + [...D('h').querySelectorAll('.player')].map(p => p.textContent.replace(/\s+/g, ' ').trim()).join(' | '));
+
+    D('g').querySelector('.mode button[data-mode="chat"]').click();
+    await until(() => D('h').body.dataset.mode === 'chat');
+    L('host switched to chat');
+    const ci = D('g').getElementById('chatInput'); ci.focus();
+    for (const ch of 'hi yo') press('g', ch === ' ' ? ' ' : ch, ci);
+    press('g', 'Backspace', ci);
+    await sleep(800);
+    await key('h', '....');
+    await sleep(700);
+    const rows = [...D('h').querySelectorAll('.tape-row')].map(r => r.querySelector('.tape-name').textContent + ': ' +
+      [...r.querySelectorAll('.cell')].map(c => c.classList.contains('space') ? '_' : c.querySelector('.ch').textContent).join(''));
+    L('host sees tapes -> ' + rows.join(' || '));
+    window.done = 'ok';
+  } catch (e) {
+    try { L('host lobbyMsg: ' + D('h').getElementById('lobbyMsg').textContent); } catch (x) {}
+    L('ERROR ' + e.message + ' ' + e.stack); window.done = 'fail'; }
+};
+</script></body></html>

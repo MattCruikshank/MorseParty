@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Morse Party</title>
+  <meta name="description" content="Key Morse code with friends: race to copy each letter, or chat in Morse. Peer-to-peer in the browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Morse <span>Party</span></h1>
+    <div id="roomInfo" class="room-info" hidden>
+      <span class="conn" id="conn" title="Connection"></span>
+      <span class="room-label">Room</span>
+      <code id="roomCode"></code>
+      <button id="copyLink" class="btn small" type="button">Copy invite link</button>
+    </div>
+    <button id="settingsBtn" class="icon-btn" type="button" aria-label="Settings" title="Settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4L10.7 6a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5A3.5 3.5 0 1 1 13 8.5a3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <!-- ================= Lobby ================= -->
+    <section id="lobby" class="lobby">
+      <h2>Key Morse code with friends</h2>
+      <p class="lede">One person keys, everyone else races to type the letter they heard. Or switch to Chat and talk in Morse.
+        It runs peer-to-peer in your browsers. The person who creates the room hosts it, so keep that tab open.</p>
+
+      <label class="field">
+        <span>Your nickname</span>
+        <input id="nameInput" type="text" maxlength="24" autocomplete="nickname" placeholder="e.g. Matt">
+      </label>
+
+      <div class="lobby-grid">
+        <div class="lobby-card">
+          <h3>Start a room</h3>
+          <p>You'll get a short code and a link to share.</p>
+          <button id="createBtn" class="btn primary" type="button">Create room</button>
+        </div>
+        <div class="lobby-card">
+          <h3>Join a room</h3>
+          <div class="join-row">
+            <input id="codeInput" type="text" maxlength="8" placeholder="Room code" autocomplete="off" spellcheck="false">
+            <button id="joinBtn" class="btn primary" type="button">Join</button>
+          </div>
+        </div>
+      </div>
+      <p id="lobbyMsg" class="status" role="status"></p>
+    </section>
+
+    <!-- ================= Room ================= -->
+    <section id="room" class="room" hidden>
+      <div class="room-bar">
+        <div class="seg mode" role="radiogroup" aria-label="Mode">
+          <button type="button" data-mode="race" role="radio">Race</button>
+          <button type="button" data-mode="chat" role="radio">Chat</button>
+        </div>
+        <p id="modeHelp" class="mode-help"></p>
+        <div class="room-actions">
+          <button id="resetBtn" class="btn small" type="button">Reset scores</button>
+          <button id="clearBtn" class="btn small" type="button">Clear tapes</button>
+          <button id="leaveBtn" class="btn small" type="button">Leave</button>
+        </div>
+      </div>
+
+      <div id="players" class="players" aria-label="Players"></div>
+      <div id="tapes" class="tapes" aria-live="polite"></div>
+
+      <div class="you">
+        <div id="guessPanel" class="guess-panel">
+          <span class="guess-label">Type the letter you hear</span>
+          <span id="guessBox" class="guess-box" aria-live="polite"></span>
+          <span id="guessMsg" class="guess-msg"></span>
+        </div>
+        <div id="chatPanel" class="chat-panel" hidden>
+          <input id="chatInput" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"
+                 placeholder="Type here. Each letter is sent the moment you type it.">
+        </div>
+
+        <section class="card" id="card" aria-label="Morse tree. Press and hold to key.">
+          <div class="card-title"><span>MORSE</span><span>CODE</span></div>
+          <div id="tree"></div>
+        </section>
+        <button id="key" class="key" type="button" aria-label="Morse key: press and hold">KEY</button>
+        <p class="key-caption">press &amp; hold here, on the card, or hold <kbd>Space</kbd></p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <!-- ================= Settings ================= -->
+  <div id="scrim" class="scrim" hidden></div>
+  <aside id="drawer" class="drawer" aria-label="Settings" aria-hidden="true">
+    <div class="drawer-head">
+      <h2>Settings</h2>
+      <button id="closeSettings" class="icon-btn" type="button" aria-label="Close settings">✕</button>
+    </div>
+
+    <fieldset>
+      <legend>You</legend>
+      <label class="field"><span>Nickname</span><input id="setName" type="text" maxlength="24"></label>
+      <label class="range"><span>Keying speed <output id="wpmOut"></output></span>
+        <input id="setWpm" type="range" min="5" max="30" step="1"></label>
+      <p class="fine">Your speed decides when a press counts as a dash, and when a pause ends a letter.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>When you key</legend>
+      <label class="check"><input type="checkbox" id="setShowCard"> Show the Morse card</label>
+      <label class="check"><input type="checkbox" id="setHearSelf"> Hear my own tone</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>When others key</legend>
+      <label class="check"><input type="checkbox" id="setHearOthers"> Hear their tones</label>
+      <div class="seg tone-style" role="radiogroup" aria-label="Tone style">
+        <label><input type="radio" name="toneStyle" value="live"><span>As keyed</span></label>
+        <label><input type="radio" name="toneStyle" value="clean"><span>Cleaned up</span></label>
+      </div>
+      <p class="fine"><b>As keyed</b> plays their real timing, live. <b>Cleaned up</b> waits for each letter, then plays it with perfect timing.</p>
+      <label class="check"><input type="checkbox" id="setShowMarks"> Show dots and dashes</label>
+      <label class="check"><input type="checkbox" id="setPlayTyped"> Play typed messages as Morse <small>(Chat)</small></label>
+      <label class="range"><span>Volume <output id="volOut"></output></span>
+        <input id="setVolume" type="range" min="0" max="1" step="0.05"></label>
+    </fieldset>
+  </aside>
+
+  <script src="lib/peerjs.min.js"></script>
+  <script src="js/morse.js"></script>
+  <script src="js/tree.js"></script>
+  <script src="js/card.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/room.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
