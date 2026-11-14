@@ -47,3 +47,4 @@ Each player gets their own tone (pitch and waveform) and color.
 
 - `node test/room.test.js` checks the game rules.
 - `test/e2e.mjs` drives headless Edge through a real two-browser session (needs a local server on port 8765: `python -m http.server 8765`).
+- `test/shifts.html` plays every mode at phone width and lists anything that moves the layout during play: `node test/e2e.mjs <edge.exe> out.png http://localhost:8765/test/shifts.html`.

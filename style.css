@@ -459,3 +459,53 @@ body.not-my-turn .key, body.not-my-turn .card { opacity: .45; filter: grayscale(
   .ref.keyboard .rk-marks i.h { width: 7px; }
   .ref.keyboard .rk-marks i.d { width: 3.5px; }
 }
+
+/* ---------- Keep things still while playing (mostly for phones) ---------- */
+.invisible { visibility: hidden; }
+
+/* Tapes: fixed height, whatever the cells contain. */
+.tape-inner { height: 90px; min-height: 0; }
+.cell { gap: 4px; padding: 3px 5px; }
+.cell .meta { line-height: 1.1; }
+
+/* Guess panel: label on top, then the box and a two-line message area. */
+.guess-panel {
+  display: grid; grid-template-columns: 46px minmax(0, 1fr); grid-template-areas: "label label" "box msg";
+  align-items: center; justify-content: stretch; gap: 6px 12px;
+}
+.guess-label { grid-area: label; text-align: center; }
+.guess-box { grid-area: box; }
+.guess-msg { grid-area: msg; min-width: 0; height: 2.8em; line-height: 1.4; display: flex; align-items: center; overflow: hidden; }
+
+/* Turn panel: same border width either way, room for two lines, button always takes its space. */
+.turn-panel { min-height: 62px; border: 2px dashed var(--border); flex-wrap: nowrap; text-align: left; }
+.turn-panel.mine { border: 2px solid var(--ok); }
+.turn-panel #turnText { flex: 1 1 auto; min-width: 0; line-height: 1.35; }
+.turn-panel #passBtn { flex: none; }
+
+/* Challenge panel stays put between turns. */
+.target-panel { min-height: 70px; }
+.target-panel .target-ch { min-width: 1.2ch; }
+.target-panel.idle .target-label { opacity: .6; font-weight: 400; }
+.target-panel.idle #skipBtn { visibility: hidden; }
+
+/* Whack-a-Mole: never wraps; the message has a fixed two-line slot. */
+.mole-panel { flex-wrap: nowrap; }
+.mole-side { flex: 1 1 0; min-width: 0; }
+.mole-text { min-height: 2.8em; line-height: 1.4; display: flex; align-items: center; }
+
+/* Player chips: the key badge and scores don't change a chip's width. */
+.player { position: relative; }
+.player.has-key .pname::before { content: none; }
+.player.has-key::after {
+  content: '🔑'; position: absolute; top: -9px; right: -6px; font-size: 13px;
+  background: var(--panel); border-radius: 50%; line-height: 1; padding: 1px;
+}
+.player .score { min-width: 34px; }
+
+@media (max-width: 600px) {
+  .mole-panel { gap: 12px; padding: 10px; }
+  .mole-hole { width: 100px; flex: none; }
+  .mole { width: 76px; height: 76px; margin-left: -38px; font-size: 44px; }
+  .mole-text { font-size: 1rem; }
+}

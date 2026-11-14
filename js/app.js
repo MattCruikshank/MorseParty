@@ -337,9 +337,12 @@
   const myTurn = () => !turn || turn.pid === ME;
 
   function renderTarget() {
-    const show = mode === 'team' && challenge && target && myTurn();
-    $('#targetPanel').hidden = !show;
-    $('#targetCh').textContent = target || '';
+    const panel = $('#targetPanel');
+    panel.hidden = !(mode === 'team' && challenge);
+    const mine = !!target && myTurn();
+    panel.classList.toggle('idle', !mine);
+    $('#targetLabel').textContent = mine ? 'Key this letter' : 'Your letter shows on your turn';
+    $('#targetCh').textContent = mine ? target : '';
     renderGoal();
   }
 
@@ -361,7 +364,7 @@
         ? `<b>Your turn to key</b>${left}`
         : `<b>${esc(nameOf(turn.pid))}</b> is keying${left}. Listen and guess!`;
       $('#turnPanel').classList.toggle('mine', turn.pid === ME);
-      $('#passBtn').hidden = turn.pid !== ME;
+      $('#passBtn').classList.toggle('invisible', turn.pid !== ME);
     }
     renderTarget();
     renderPlayers();
